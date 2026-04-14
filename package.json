@@ -1,0 +1,17 @@
+{
+  "name": "@panitw/todo4-openclaw-plugin",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenClaw plugin that onboards Todo4 from chat and ships an MCP-aware work skill.",
+  "license": "MIT",
+  "author": "Panit Wechasil",
+  "openclaw": {
+    "extensions": ["./index.ts"],
+    "compat": { "pluginApi": ">=2026.3.24-beta.2" }
+  },
+  "devDependencies": {
+    "@sinclair/typebox": "^0.34.49",
+    "@types/node": "^25.6.0",
+    "typescript": "^5.9.3"
+  }
+}

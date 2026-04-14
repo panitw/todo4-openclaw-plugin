@@ -1,0 +1,6 @@
+{
+  "id": "todo4",
+  "name": "Todo4",
+  "description": "Onboard Todo4 from chat (email + OTP) and wire up the Todo4 MCP server. Bundles a work-with-todo4 skill that tells the agent how to use the Todo4 MCP tools effectively.",
+  "configSchema": { "type": "object", "additionalProperties": false }
+}
