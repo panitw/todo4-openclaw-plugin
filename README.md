@@ -12,11 +12,34 @@ This complements the existing [openclaw-onboard](https://github.com/panitw/todo4
 
 ## Install
 
+`openclaw plugins install` does **not** accept raw GitHub URLs. Pick one of the supported install specs:
+
+### a. From ClawHub (once published)
+
 ```bash
-openclaw plugins install https://github.com/panitw/todo4-openclaw-plugin
+openclaw plugins install clawhub:@panitw/todo4-openclaw-plugin
 ```
 
-Restart OpenClaw (or reload plugins) so `register()` runs and the bundled `todo4-work` skill lands in `~/.openclaw/skills/`.
+### b. From npm (once published)
+
+```bash
+openclaw plugins install @panitw/todo4-openclaw-plugin
+```
+
+### c. From a local clone (for development or install-from-source)
+
+```bash
+git clone https://github.com/panitw/todo4-openclaw-plugin
+cd todo4-openclaw-plugin
+npm install
+openclaw plugins install --link "$(pwd)"
+```
+
+Then, in all three cases, restart the gateway so the plugin's `register()` runs and the bundled `todo4-work` skill lands in `~/.openclaw/skills/`:
+
+```bash
+openclaw gateway restart
+```
 
 ### Verify
 
