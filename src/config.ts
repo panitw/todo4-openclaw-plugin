@@ -29,6 +29,17 @@ export function getOpenclawConfigPath(): string {
   return path.join(getOpenclawHome(), "openclaw.json");
 }
 
+/**
+ * mcporter reads MCP servers from a separate registry. OpenClaw's agent
+ * tool-call path currently routes through mcporter (verified empirically:
+ * `mcporter call todo4.list_tasks` from an agent turn), so we must register
+ * the server here too — the openclaw.json entry alone won't surface tools
+ * to the agent in the current runtime.
+ */
+export function getMcporterConfigPath(): string {
+  return path.join(getOpenclawHome(), "workspace", "config", "mcporter.json");
+}
+
 export function getEnvFile(): string {
   return path.join(getOpenclawHome(), ".env");
 }

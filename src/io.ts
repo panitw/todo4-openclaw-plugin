@@ -16,6 +16,7 @@ import {
   ENV_TOKEN_KEY,
   SERVER_NAME,
   getEnvFile,
+  getMcporterConfigPath,
   getOpenclawConfigPath,
   getSkillsDir,
 } from "./config.js";
@@ -55,6 +56,62 @@ export function writeMcpConfig(todo4Entry: Record<string, unknown>): void {
   existing.mcp = mcpBlock;
 
   atomicWrite(configPath, JSON.stringify(existing, null, 2) + "\n", 0o644);
+}
+
+/**
+ * Register the server in mcporter's workspace config so the agent's tool-call
+ * path (which goes through mcporter, not openclaw.json) sees it. Shape matches
+ * what `mcporter config add --url --header` produces:
+ *
+ *   { "mcpServers": { "todo4": { "baseUrl": "...", "headers": { ... } } } }
+ */
+export function writeMcporterConfig(entry: { url: string; headers?: Record<string, unknown> }): void {
+  const configPath = getMcporterConfigPath();
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+
+  let existing: Record<string, unknown> = {};
+  if (fs.existsSync(configPath)) {
+    const raw = fs.readFileSync(configPath, "utf8");
+    if (raw.trim().length) {
+      try {
+        const parsed: unknown = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          existing = parsed as Record<string, unknown>;
+        } else {
+          throw new Error(`Existing ${configPath} is not a JSON object`);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        throw new Error(`Could not parse existing ${configPath}: ${message}`);
+      }
+    }
+  }
+
+  const servers: Record<string, unknown> =
+    existing.mcpServers && typeof existing.mcpServers === "object" && !Array.isArray(existing.mcpServers)
+      ? { ...(existing.mcpServers as Record<string, unknown>) }
+      : {};
+  const mcporterEntry: Record<string, unknown> = { baseUrl: entry.url };
+  if (entry.headers && Object.keys(entry.headers).length) {
+    mcporterEntry.headers = entry.headers;
+  }
+  servers[SERVER_NAME] = mcporterEntry;
+  existing.mcpServers = servers;
+
+  atomicWrite(configPath, JSON.stringify(existing, null, 2) + "\n", 0o644);
+}
+
+export function mcporterConfigHasTodo4(): boolean {
+  const configPath = getMcporterConfigPath();
+  if (!fs.existsSync(configPath)) return false;
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    if (!parsed || typeof parsed !== "object") return false;
+    const servers = (parsed as Record<string, unknown>).mcpServers;
+    return !!(servers && typeof servers === "object" && (servers as Record<string, unknown>)[SERVER_NAME]);
+  } catch {
+    return false;
+  }
 }
 
 export function writeEnvToken(token: string): void {

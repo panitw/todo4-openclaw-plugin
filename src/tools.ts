@@ -10,7 +10,14 @@
  */
 import { extractRetryAfter, getJson, postJson } from "./api-client.js";
 import { AGENT_PLATFORM, ENV_TOKEN_KEY, SERVER_NAME, getOpenclawConfigPath } from "./config.js";
-import { envHasToken, mcpConfigHasTodo4, writeEnvToken, writeMcpConfig } from "./io.js";
+import {
+  envHasToken,
+  mcpConfigHasTodo4,
+  mcporterConfigHasTodo4,
+  writeEnvToken,
+  writeMcpConfig,
+  writeMcporterConfig,
+} from "./io.js";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -120,6 +127,8 @@ export async function todo4Connect(params: {
 
   try {
     writeMcpConfig(entry);
+    const urlValue = typeof entry.url === "string" ? entry.url : "";
+    writeMcporterConfig({ url: urlValue, headers: headersObj });
     writeEnvToken(agentToken);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
@@ -131,7 +140,7 @@ export async function todo4Connect(params: {
 
   const webLoginUrl = typeof dataObj.webLoginUrl === "string" ? dataObj.webLoginUrl : null;
   return ok({
-    message: `Connected as '${agentName}'. The Todo4 MCP server was added to ~/.openclaw/openclaw.json under mcp.servers.todo4.`,
+    message: `Connected as '${agentName}'. The Todo4 MCP server was added to openclaw.json (mcp.servers.todo4) and mcporter.json (mcpServers.todo4). The raw agent token lives only in ~/.openclaw/.env.`,
     reloadHint: "Run `openclaw gateway restart` so the new MCP server is picked up.",
     webLoginUrl,
   });
@@ -139,12 +148,15 @@ export async function todo4Connect(params: {
 
 export async function todo4Status(): Promise<ToolResult> {
   const tokenPresent = envHasToken();
-  const mcpEntryPresent = mcpConfigHasTodo4();
+  const openclawEntryPresent = mcpConfigHasTodo4();
+  const mcporterEntryPresent = mcporterConfigHasTodo4();
   const probe = await getJson("/health");
   return ok({
-    configured: tokenPresent && mcpEntryPresent,
+    // mcporter entry is the one the agent actually uses; openclaw entry is for `openclaw mcp list`.
+    configured: tokenPresent && mcporterEntryPresent,
     tokenPresent,
-    mcpEntryPresent,
+    mcporterEntryPresent,
+    openclawEntryPresent,
     apiReachable: probe.ok,
     apiError: probe.error === "network" ? probe.message : undefined,
     openclawConfigPath: getOpenclawConfigPath(),
