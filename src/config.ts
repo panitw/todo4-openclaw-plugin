@@ -20,8 +20,13 @@ export function getOpenclawHome(): string {
   return process.env.OPENCLAW_HOME ?? path.join(os.homedir(), ".openclaw");
 }
 
-export function getMcpConfigPath(): string {
-  return path.join(getOpenclawHome(), "mcp_config.json");
+/**
+ * The real OpenClaw config file. MCP servers live under the `mcp.servers`
+ * key here (per https://docs.openclaw.ai/cli/mcp), NOT in a separate
+ * `mcp_config.json` — that file is unused by OpenClaw.
+ */
+export function getOpenclawConfigPath(): string {
+  return path.join(getOpenclawHome(), "openclaw.json");
 }
 
 export function getEnvFile(): string {

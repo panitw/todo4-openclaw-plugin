@@ -9,7 +9,7 @@
  * only meant to be passed straight into `todo4_connect`. We do not persist it.
  */
 import { extractRetryAfter, getJson, postJson } from "./api-client.js";
-import { AGENT_PLATFORM, ENV_TOKEN_KEY, SERVER_NAME, getMcpConfigPath } from "./config.js";
+import { AGENT_PLATFORM, ENV_TOKEN_KEY, SERVER_NAME, getOpenclawConfigPath } from "./config.js";
 import { envHasToken, mcpConfigHasTodo4, writeEnvToken, writeMcpConfig } from "./io.js";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -131,8 +131,8 @@ export async function todo4Connect(params: {
 
   const webLoginUrl = typeof dataObj.webLoginUrl === "string" ? dataObj.webLoginUrl : null;
   return ok({
-    message: `Connected as '${agentName}'. The Todo4 MCP tools will be available on the next OpenClaw session.`,
-    reloadHint: "Restart OpenClaw or reload the MCP config so the new server is picked up.",
+    message: `Connected as '${agentName}'. The Todo4 MCP server was added to ~/.openclaw/openclaw.json under mcp.servers.todo4.`,
+    reloadHint: "Run `openclaw gateway restart` so the new MCP server is picked up.",
     webLoginUrl,
   });
 }
@@ -147,6 +147,6 @@ export async function todo4Status(): Promise<ToolResult> {
     mcpEntryPresent,
     apiReachable: probe.ok,
     apiError: probe.error === "network" ? probe.message : undefined,
-    mcpConfigPath: getMcpConfigPath(),
+    openclawConfigPath: getOpenclawConfigPath(),
   });
 }

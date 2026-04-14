@@ -1,8 +1,10 @@
 /**
  * Filesystem helpers for writing OpenClaw config + .env atomically.
  *
- * - `writeMcpConfig` deep-merges the todo4 entry into ~/.openclaw/mcp_config.json,
- *   preserving any other configured MCP servers.
+ * - `writeMcpConfig` merges the todo4 entry into ~/.openclaw/openclaw.json
+ *   under `mcp.servers.todo4`, preserving every other key in the config.
+ *   (Per https://docs.openclaw.ai/cli/mcp — MCP servers live inside the
+ *   main OpenClaw config, not in a separate mcp_config.json.)
  * - `writeEnvToken` rewrites the TODO4_AGENT_TOKEN line in ~/.openclaw/.env,
  *   preserves other lines, and chmods the file to 0o600.
  * - `installBundledSkills` copies bundled SKILL.md files into ~/.openclaw/skills/<name>/.
@@ -14,12 +16,12 @@ import {
   ENV_TOKEN_KEY,
   SERVER_NAME,
   getEnvFile,
-  getMcpConfigPath,
+  getOpenclawConfigPath,
   getSkillsDir,
 } from "./config.js";
 
 export function writeMcpConfig(todo4Entry: Record<string, unknown>): void {
-  const configPath = getMcpConfigPath();
+  const configPath = getOpenclawConfigPath();
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 
   let existing: Record<string, unknown> = {};
@@ -40,12 +42,17 @@ export function writeMcpConfig(todo4Entry: Record<string, unknown>): void {
     }
   }
 
+  const mcpBlock: Record<string, unknown> =
+    existing.mcp && typeof existing.mcp === "object" && !Array.isArray(existing.mcp)
+      ? { ...(existing.mcp as Record<string, unknown>) }
+      : {};
   const servers: Record<string, unknown> =
-    existing.mcpServers && typeof existing.mcpServers === "object"
-      ? { ...(existing.mcpServers as Record<string, unknown>) }
+    mcpBlock.servers && typeof mcpBlock.servers === "object" && !Array.isArray(mcpBlock.servers)
+      ? { ...(mcpBlock.servers as Record<string, unknown>) }
       : {};
   servers[SERVER_NAME] = todo4Entry;
-  existing.mcpServers = servers;
+  mcpBlock.servers = servers;
+  existing.mcp = mcpBlock;
 
   atomicWrite(configPath, JSON.stringify(existing, null, 2) + "\n", 0o644);
 }
@@ -86,14 +93,16 @@ export function envHasToken(): boolean {
 }
 
 export function mcpConfigHasTodo4(): boolean {
-  const configPath = getMcpConfigPath();
+  const configPath = getOpenclawConfigPath();
   if (!fs.existsSync(configPath)) return false;
   try {
     const raw = fs.readFileSync(configPath, "utf8");
     if (!raw.trim().length) return false;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return false;
-    const servers = (parsed as Record<string, unknown>).mcpServers;
+    const mcp = (parsed as Record<string, unknown>).mcp;
+    if (!mcp || typeof mcp !== "object") return false;
+    const servers = (mcp as Record<string, unknown>).servers;
     return !!(servers && typeof servers === "object" && (servers as Record<string, unknown>)[SERVER_NAME]);
   } catch {
     return false;

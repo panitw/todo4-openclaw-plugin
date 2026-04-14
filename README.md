@@ -5,7 +5,7 @@ OpenClaw plugin that onboards [Todo4](https://todo4.io) from chat and ships an M
 ## What it does
 
 - **Onboards Todo4 from chat** via four agent tools — email → OTP → agent connection, no browser or password required.
-- **Wires up the Todo4 MCP server** — writes the server entry into `~/.openclaw/mcp_config.json` (deep-merge, preserves other servers) and stores the agent token in `~/.openclaw/.env`.
+- **Wires up the Todo4 MCP server** — writes the server entry into `~/.openclaw/openclaw.json` (under `mcp.servers.todo4`) (deep-merge, preserves other servers) and stores the agent token in `~/.openclaw/.env`.
 - **Bundles a `todo4-work` skill** — installed to `~/.openclaw/skills/todo4-work/SKILL.md` on plugin load. Tells the agent which Todo4 MCP tools to call (and which not to reach for) when the user asks task-related things.
 
 This complements the existing [openclaw-onboard](https://github.com/panitw/todo4-onboard-skill) skill on ClawHub: that skill drives a conversational onboarding interview using bash scripts; this plugin exposes the same flow as typed agent tools so other skills/agents can invoke them programmatically.
@@ -87,10 +87,10 @@ The flow asks for your email, sends a one-time code, verifies it, and connects t
 | Calls `POST /auth/register-passwordless` | User email only |
 | Calls `POST /auth/verify-otp` | Email + 6-digit code |
 | Calls `POST /auth/agent-connect` | Access-token JWT (ephemeral, 1-hour expiry) |
-| Writes MCP config to `$OPENCLAW_HOME/mcp_config.json` | Deep-merge, preserves other MCP servers |
+| Writes MCP server entry into `$OPENCLAW_HOME/openclaw.json` under `mcp.servers.todo4` | Merge, preserves every other key in the config |
 | Writes agent token to `$OPENCLAW_HOME/.env` | As `TODO4_AGENT_TOKEN=...`, file mode `0o600` |
 
-The MCP config stores the authorization header as `Bearer ${TODO4_AGENT_TOKEN}` — the raw agent token only lives in `.env`, never in `mcp_config.json`.
+The MCP entry stores the authorization header as `Bearer ${TODO4_AGENT_TOKEN}` — the raw agent token only lives in `.env`, never in `openclaw.json`.
 
 Tool handlers never throw, never log secrets, and never return raw tokens in their response payload.
 
