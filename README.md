@@ -6,7 +6,9 @@ OpenClaw plugin that onboards [Todo4](https://todo4.io) from chat and ships an M
 
 - **Onboards Todo4 from chat** via four agent tools — email → OTP → agent connection, no browser or password required.
 - **Wires up the Todo4 MCP server** — writes the server entry into `~/.openclaw/openclaw.json` (under `mcp.servers.todo4`) (deep-merge, preserves other servers) and stores the agent token in `~/.openclaw/.env`.
-- **Bundles a `todo4-work` skill** — installed to `~/.openclaw/skills/todo4-work/SKILL.md` on plugin load. Tells the agent which Todo4 MCP tools to call (and which not to reach for) when the user asks task-related things.
+- **Bundles two skills** — installed to `~/.openclaw/skills/` on plugin load:
+  - `todo4-onboard` — the interview flow (email → OTP → connect) the agent runs when the user asks to "set me up with Todo4".
+  - `todo4-work` — tells the agent which Todo4 MCP tools to call (and which not to reach for) when the user asks task-related things.
 
 This complements the existing [openclaw-onboard](https://github.com/panitw/todo4-onboard-skill) skill on ClawHub: that skill drives a conversational onboarding interview using bash scripts; this plugin exposes the same flow as typed agent tools so other skills/agents can invoke them programmatically.
 
@@ -66,10 +68,11 @@ The flow asks for your email, sends a one-time code, verifies it, and connects t
 | `todo4_connect` | Register this OpenClaw instance as a Todo4 agent. Writes MCP config + `.env` token. Returns a one-time `webLoginUrl` for the user. |
 | `todo4_status` | Report whether MCP is configured, token is present, and the API is reachable. |
 
-## Bundled skill
+## Bundled skills
 
 | Skill | Where | Loads when |
 |---|---|---|
+| `todo4-onboard` | `~/.openclaw/skills/todo4-onboard/SKILL.md` (installed by this plugin) | The user asks to sign up for, install, connect, or get started with Todo4. |
 | `todo4-work` | `~/.openclaw/skills/todo4-work/SKILL.md` (installed by this plugin) | The user mentions Todo4, their tasks, planning, or triage. |
 
 ## Environment
