@@ -7,7 +7,11 @@
   "author": "Panit Wechasil",
   "openclaw": {
     "extensions": ["./index.ts"],
-    "compat": { "pluginApi": ">=2026.3.24-beta.2" }
+    "compat": { "pluginApi": ">=2026.3.24-beta.2" },
+    "build": {
+      "openclawVersion": "2026.4.11",
+      "pluginSdkVersion": "2026.4.11"
+    }
   },
   "dependencies": {
     "@sinclair/typebox": "^0.34.49"
