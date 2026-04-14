@@ -10,6 +10,7 @@
  * - `installBundledSkills` copies bundled SKILL.md files into ~/.openclaw/skills/<name>/.
  */
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import {
@@ -64,8 +65,19 @@ export function writeMcpConfig(todo4Entry: Record<string, unknown>): void {
  * what `mcporter config add --url --header` produces:
  *
  *   { "mcpServers": { "todo4": { "baseUrl": "...", "headers": { ... } } } }
+ *
+ * IMPORTANT: the raw agent token is embedded directly in the Authorization
+ * header — not ${TODO4_AGENT_TOKEN} as we do in openclaw.json. Here's why:
+ * mcporter does env-var substitution only from the invoking process's
+ * environment, not from ~/.openclaw/.env. If OpenClaw's agent spawns
+ * mcporter without exporting the token (the current default), mcporter
+ * can't resolve the reference, silently falls back to its OAuth token
+ * cache, and re-uses a stale cached token that was later superseded by
+ * the newer agent-connect call. The server then returns
+ * "Agent has been revoked" and the user is stuck.
+ * File is chmod 0o600 to compensate for the token living in plaintext.
  */
-export function writeMcporterConfig(entry: { url: string; headers?: Record<string, unknown> }): void {
+export function writeMcporterConfig(entry: { url: string; rawToken: string }): void {
   const configPath = getMcporterConfigPath();
   fs.mkdirSync(path.dirname(configPath), { recursive: true });
 
@@ -91,14 +103,39 @@ export function writeMcporterConfig(entry: { url: string; headers?: Record<strin
     existing.mcpServers && typeof existing.mcpServers === "object" && !Array.isArray(existing.mcpServers)
       ? { ...(existing.mcpServers as Record<string, unknown>) }
       : {};
-  const mcporterEntry: Record<string, unknown> = { baseUrl: entry.url };
-  if (entry.headers && Object.keys(entry.headers).length) {
-    mcporterEntry.headers = entry.headers;
-  }
-  servers[SERVER_NAME] = mcporterEntry;
+  servers[SERVER_NAME] = {
+    baseUrl: entry.url,
+    headers: { Authorization: `Bearer ${entry.rawToken}` },
+  };
   existing.mcpServers = servers;
 
-  atomicWrite(configPath, JSON.stringify(existing, null, 2) + "\n", 0o644);
+  atomicWrite(configPath, JSON.stringify(existing, null, 2) + "\n", 0o600);
+}
+
+/**
+ * Purge mcporter's cached OAuth tokens for this server so the next call
+ * uses the Bearer header we just wrote, not a stale cached access_token
+ * from a prior onboarding round.
+ */
+export function clearMcporterCredentials(): void {
+  const credPath = path.join(os.homedir(), ".mcporter", "credentials.json");
+  if (!fs.existsSync(credPath)) return;
+  try {
+    const raw = fs.readFileSync(credPath, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || !parsed.entries) return;
+    const filtered: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(parsed.entries)) {
+      const asStr = JSON.stringify(val);
+      if (key.startsWith(`${SERVER_NAME}|`) || key.startsWith(`${SERVER_NAME}-`)) continue;
+      if (asStr.includes("todo4.io") || asStr.includes("todo-web-staging")) continue;
+      filtered[key] = val;
+    }
+    parsed.entries = filtered;
+    atomicWrite(credPath, JSON.stringify(parsed, null, 2) + "\n", 0o600);
+  } catch {
+    // Silent: stale cache is recoverable, and this is a best-effort cleanup.
+  }
 }
 
 export function mcporterConfigHasTodo4(): boolean {

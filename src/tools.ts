@@ -11,6 +11,7 @@
 import { extractRetryAfter, getJson, postJson } from "./api-client.js";
 import { AGENT_PLATFORM, ENV_TOKEN_KEY, SERVER_NAME, getOpenclawConfigPath } from "./config.js";
 import {
+  clearMcporterCredentials,
   envHasToken,
   mcpConfigHasTodo4,
   mcporterConfigHasTodo4,
@@ -128,7 +129,11 @@ export async function todo4Connect(params: {
   try {
     writeMcpConfig(entry);
     const urlValue = typeof entry.url === "string" ? entry.url : "";
-    writeMcporterConfig({ url: urlValue, headers: headersObj });
+    // mcporter config gets the raw token inline (it doesn't read .env); see writeMcporterConfig for rationale.
+    writeMcporterConfig({ url: urlValue, rawToken: agentToken });
+    // Flush stale OAuth creds mcporter cached during prior onboarding rounds;
+    // otherwise mcporter would use a superseded token and the server returns "agent revoked".
+    clearMcporterCredentials();
     writeEnvToken(agentToken);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
